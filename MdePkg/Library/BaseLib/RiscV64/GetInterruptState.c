@@ -7,11 +7,19 @@
 **/
 
 #include "BaseLibInternals.h"
+#include <Register/RiscV64/RiscVEncoding.h>
 
 extern UINT32
 RiscVGetSupervisorModeInterrupts (
   VOID
   );
+
+#ifdef RISCV_CPUCP_M_MODE
+extern UINT32
+RiscVGetMachineModeInterrupts (
+  VOID
+  );
+#endif
 
 /**
   Retrieves the current CPU interrupt state.
@@ -31,6 +39,11 @@ GetInterruptState (
 {
   unsigned long  RetValue;
 
+#ifdef RISCV_CPUCP_M_MODE
+  RetValue = RiscVGetMachineModeInterrupts ();
+#else
   RetValue = RiscVGetSupervisorModeInterrupts ();
+#endif
+
   return RetValue ? TRUE : FALSE;
 }

@@ -7,11 +7,19 @@
 **/
 
 #include "BaseLibInternals.h"
+#include <Register/RiscV64/RiscVEncoding.h>
 
 extern VOID
 RiscVEnableSupervisorModeInterrupt (
   VOID
   );
+
+#ifdef RISCV_CPUCP_M_MODE
+extern VOID
+RiscVEnableMachineModeInterrupts (
+  VOID
+  );
+#endif
 
 /**
   Enables CPU interrupts.
@@ -23,5 +31,9 @@ EnableInterrupts (
   VOID
   )
 {
+#ifdef RISCV_CPUCP_M_MODE
+  RiscVEnableMachineModeInterrupts ();
+#else
   RiscVEnableSupervisorModeInterrupt ();
+#endif
 }

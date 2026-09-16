@@ -13,10 +13,17 @@
 .global ASM_PFX(InitializeFloatingPointUnits)
 
 ASM_PFX(InitializeFloatingPointUnits):
+#ifdef RISCV_CPUCP_M_MODE
+    csrr  a0, CSR_MSTATUS
+    li    a1, MSTATUS_FS
+    or    a0, a0, a1
+    csrw  CSR_MSTATUS, a0
+#else
     csrr  a0, CSR_SSTATUS
     li    a1, MSTATUS_FS
     or    a0, a0, a1
     csrw  CSR_SSTATUS, a0
+#endif
     csrw  CSR_FCSR, x0
     li    a0, 0
     ret

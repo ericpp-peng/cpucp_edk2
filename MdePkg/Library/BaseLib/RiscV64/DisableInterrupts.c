@@ -6,11 +6,19 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 #include "BaseLibInternals.h"
+#include <Register/RiscV64/RiscVEncoding.h>
 
 extern VOID
 RiscVDisableSupervisorModeInterrupts (
   VOID
   );
+
+#ifdef RISCV_CPUCP_M_MODE
+extern VOID
+RiscVDisableMachineModeInterrupts (
+  VOID
+  );
+#endif
 
 /**
   Disables CPU interrupts.
@@ -22,5 +30,9 @@ DisableInterrupts (
   VOID
   )
 {
+#ifdef RISCV_CPUCP_M_MODE
+  RiscVDisableMachineModeInterrupts ();
+#else
   RiscVDisableSupervisorModeInterrupts ();
+#endif
 }

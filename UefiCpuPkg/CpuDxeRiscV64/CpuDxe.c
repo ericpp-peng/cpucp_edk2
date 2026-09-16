@@ -348,6 +348,21 @@ InitializeCpu (
   //
   DisableInterrupts ();
 
+#ifdef RISCV_CPUCP_M_MODE
+  //
+  // CPUCP does not use machine software interrupts.
+  // Keep MSIE masked because no MSIP handler is installed.
+  //
+  RiscVDisableMachineSoftwareInterrupt ();
+
+  //
+  // CPUCP Local Interrupt 0 (LIE0) is enabled before UEFI entry.
+  // Keep LIE0 masked because UEFI has no handler or documented
+  // acknowledge/clear sequence for the underlying interrupt source.
+  //
+  RiscVDisableMachineLocalInterrupt0 ();
+#endif
+
   //
   // Enable MMU
   //

@@ -102,3 +102,98 @@ SupervisorModeTrap:
   ld    t0, SMODE_TRAP_REGS_OFFSET(t0)(sp)
   addi  sp, sp, SMODE_TRAP_REGS_SIZE
   sret
+
+#ifdef RISCV_CPUCP_M_MODE
+  .align 3
+  .section .entry, "ax", %progbits
+  .globl MachineModeTrap
+MachineModeTrap:
+  addi sp, sp, -MMODE_TRAP_REGS_SIZE
+
+  /* Save all general registers except SP */
+  sd    t0, MMODE_TRAP_REGS_OFFSET(t0)(sp)
+
+  csrr  t0, CSR_MSTATUS
+  sd    t0, MMODE_TRAP_REGS_OFFSET(mstatus)(sp)
+  csrr  t0, CSR_MEPC
+  sd    t0, MMODE_TRAP_REGS_OFFSET(mepc)(sp)
+  csrr  t0, CSR_MTVAL
+  sd    t0, MMODE_TRAP_REGS_OFFSET(mtval)(sp)
+  ld    t0, MMODE_TRAP_REGS_OFFSET(t0)(sp)
+
+  sd    zero, MMODE_TRAP_REGS_OFFSET(zero)(sp)
+  sd    ra, MMODE_TRAP_REGS_OFFSET(ra)(sp)
+  sd    gp, MMODE_TRAP_REGS_OFFSET(gp)(sp)
+  sd    tp, MMODE_TRAP_REGS_OFFSET(tp)(sp)
+  sd    t1, MMODE_TRAP_REGS_OFFSET(t1)(sp)
+  sd    t2, MMODE_TRAP_REGS_OFFSET(t2)(sp)
+  sd    s0, MMODE_TRAP_REGS_OFFSET(s0)(sp)
+  sd    s1, MMODE_TRAP_REGS_OFFSET(s1)(sp)
+  sd    a0, MMODE_TRAP_REGS_OFFSET(a0)(sp)
+  sd    a1, MMODE_TRAP_REGS_OFFSET(a1)(sp)
+  sd    a2, MMODE_TRAP_REGS_OFFSET(a2)(sp)
+  sd    a3, MMODE_TRAP_REGS_OFFSET(a3)(sp)
+  sd    a4, MMODE_TRAP_REGS_OFFSET(a4)(sp)
+  sd    a5, MMODE_TRAP_REGS_OFFSET(a5)(sp)
+  sd    a6, MMODE_TRAP_REGS_OFFSET(a6)(sp)
+  sd    a7, MMODE_TRAP_REGS_OFFSET(a7)(sp)
+  sd    s2, MMODE_TRAP_REGS_OFFSET(s2)(sp)
+  sd    s3, MMODE_TRAP_REGS_OFFSET(s3)(sp)
+  sd    s4, MMODE_TRAP_REGS_OFFSET(s4)(sp)
+  sd    s5, MMODE_TRAP_REGS_OFFSET(s5)(sp)
+  sd    s6, MMODE_TRAP_REGS_OFFSET(s6)(sp)
+  sd    s7, MMODE_TRAP_REGS_OFFSET(s7)(sp)
+  sd    s8, MMODE_TRAP_REGS_OFFSET(s8)(sp)
+  sd    s9, MMODE_TRAP_REGS_OFFSET(s9)(sp)
+  sd    s10, MMODE_TRAP_REGS_OFFSET(s10)(sp)
+  sd    s11, MMODE_TRAP_REGS_OFFSET(s11)(sp)
+  sd    t3, MMODE_TRAP_REGS_OFFSET(t3)(sp)
+  sd    t4, MMODE_TRAP_REGS_OFFSET(t4)(sp)
+  sd    t5, MMODE_TRAP_REGS_OFFSET(t5)(sp)
+  sd    t6, MMODE_TRAP_REGS_OFFSET(t6)(sp)
+
+  /* Call to Machine mode trap handler in CpuExceptionHandlerLib.c */
+  mv    a0, sp
+  call  RiscVMachineModeTrapHandler
+
+  /* Restore all general registers except SP */
+  ld    ra, MMODE_TRAP_REGS_OFFSET(ra)(sp)
+  ld    gp, MMODE_TRAP_REGS_OFFSET(gp)(sp)
+  ld    tp, MMODE_TRAP_REGS_OFFSET(tp)(sp)
+  ld    t2, MMODE_TRAP_REGS_OFFSET(t2)(sp)
+  ld    t1, MMODE_TRAP_REGS_OFFSET(t1)(sp)
+  ld    s0, MMODE_TRAP_REGS_OFFSET(s0)(sp)
+  ld    s1, MMODE_TRAP_REGS_OFFSET(s1)(sp)
+  ld    a0, MMODE_TRAP_REGS_OFFSET(a0)(sp)
+  ld    a1, MMODE_TRAP_REGS_OFFSET(a1)(sp)
+  ld    a2, MMODE_TRAP_REGS_OFFSET(a2)(sp)
+  ld    a3, MMODE_TRAP_REGS_OFFSET(a3)(sp)
+  ld    a4, MMODE_TRAP_REGS_OFFSET(a4)(sp)
+  ld    a5, MMODE_TRAP_REGS_OFFSET(a5)(sp)
+  ld    a6, MMODE_TRAP_REGS_OFFSET(a6)(sp)
+  ld    a7, MMODE_TRAP_REGS_OFFSET(a7)(sp)
+  ld    s2, MMODE_TRAP_REGS_OFFSET(s2)(sp)
+  ld    s3, MMODE_TRAP_REGS_OFFSET(s3)(sp)
+  ld    s4, MMODE_TRAP_REGS_OFFSET(s4)(sp)
+  ld    s5, MMODE_TRAP_REGS_OFFSET(s5)(sp)
+  ld    s6, MMODE_TRAP_REGS_OFFSET(s6)(sp)
+  ld    s7, MMODE_TRAP_REGS_OFFSET(s7)(sp)
+  ld    s8, MMODE_TRAP_REGS_OFFSET(s8)(sp)
+  ld    s9, MMODE_TRAP_REGS_OFFSET(s9)(sp)
+  ld    s10, MMODE_TRAP_REGS_OFFSET(s10)(sp)
+  ld    s11, MMODE_TRAP_REGS_OFFSET(s11)(sp)
+  ld    t3, MMODE_TRAP_REGS_OFFSET(t3)(sp)
+  ld    t4, MMODE_TRAP_REGS_OFFSET(t4)(sp)
+  ld    t5, MMODE_TRAP_REGS_OFFSET(t5)(sp)
+  ld    t6, MMODE_TRAP_REGS_OFFSET(t6)(sp)
+
+  ld    t0, MMODE_TRAP_REGS_OFFSET(mepc)(sp)
+  csrw  CSR_MEPC, t0
+  ld    t0, MMODE_TRAP_REGS_OFFSET(mstatus)(sp)
+  csrw  CSR_MSTATUS, t0
+  ld    t0, MMODE_TRAP_REGS_OFFSET(mtval)(sp)
+  csrw  CSR_MTVAL, t0
+  ld    t0, MMODE_TRAP_REGS_OFFSET(t0)(sp)
+  addi  sp, sp, MMODE_TRAP_REGS_SIZE
+  mret
+#endif

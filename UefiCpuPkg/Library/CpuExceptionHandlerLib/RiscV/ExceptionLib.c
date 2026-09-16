@@ -27,6 +27,10 @@
 
 STATIC EFI_CPU_INTERRUPT_HANDLER  mExceptionHandlers[EXCEPT_RISCV_MAX_EXCEPTIONS + 1];
 STATIC EFI_CPU_INTERRUPT_HANDLER  mIrqHandlers[EXCEPT_RISCV_MAX_IRQS + 1];
+#ifdef RISCV_CPUCP_M_MODE
+STATIC BOOLEAN                    mCpuExceptionHandlerInMachineMode;
+STATIC BOOLEAN                    mRecursiveException;
+#endif
 
 STATIC CONST CHAR8  mExceptionOrIrqUnknown[]                            = "Unknown";
 STATIC CONST CHAR8  *mExceptionNameStr[EXCEPT_RISCV_MAX_EXCEPTIONS + 1] = {
@@ -63,6 +67,10 @@ STATIC CONST CHAR8  *mIrqNameStr[EXCEPT_RISCV_MAX_IRQS + 1] = {
   "EXCEPT_RISCV_IRQ_SOFT_FROM_MMODE",
   "EXCEPT_RISCV_IRQ_4",
   "EXCEPT_RISCV_IRQ_TIMER_FROM_SMODE",
+#ifdef RISCV_CPUCP_M_MODE
+  "EXCEPT_RISCV_IRQ_6",
+  "EXCEPT_RISCV_IRQ_TIMER_FROM_MMODE",
+#endif
 };
 
 /**
@@ -140,20 +148,28 @@ DumpCpuContext (
   )
 {
   UINTN                 Printed;
-  UINTN                 RecursiveException;
   SMODE_TRAP_REGISTERS  *Regs;
 
   Printed = 0;
   Regs    = (SMODE_TRAP_REGISTERS *)SystemContext.SystemContextRiscV64;
 
-  RecursiveException = RiscVGetSupervisorScratch ();
-  if (RecursiveException == 0xdeaddead) {
+#ifdef RISCV_CPUCP_M_MODE
+  if (mRecursiveException) {
+    InternalPrintMessage ("\nRecursive exception occurred while dumping the CPU state\n");
+
+    CpuDeadLoop ();
+  }
+
+  mRecursiveException = TRUE;
+#else
+  if (RiscVGetSupervisorScratch () == 0xdeaddead) {
     InternalPrintMessage ("\nRecursive exception occurred while dumping the CPU state\n");
 
     CpuDeadLoop ();
   }
 
   RiscVSetSupervisorScratch ((UINTN)0xdeaddead);
+#endif
 
   InternalPrintMessage (
     "!!!! RISCV64 Exception Type - %016x(%a) !!!!\n",
@@ -163,6 +179,47 @@ DumpCpuContext (
 
   DEBUG_CODE_BEGIN ();
 
+#ifdef RISCV_CPUCP_M_MODE
+  if (mCpuExceptionHandlerInMachineMode) {
+    #define REGS()                                                          \
+    REG (t0); REG (t1); REG (t2); REG (t3); REG (t4); REG (t5); REG (t6); \
+    REG (s0); REG (s1); REG (s2); REG (s3); REG (s4); REG (s5); REG (s6); \
+    REG (s7); REG (s8); REG (s9); REG (s10); REG (s11);                   \
+    REG (a0); REG (a1); REG (a2); REG (a3); REG (a4); REG (a5); REG (a6); \
+    REG (a7);                                                             \
+    REG (zero); REG (ra); REG (sp); REG (gp); REG (tp);
+
+    #define REG(x)  do {                                      \
+      InternalPrintMessage ("%7a = 0x%017lx%c", #x, Regs->x,  \
+                            (++Printed % 2) ? L'\t' : L'\n'); \
+    } while (0);
+
+  REGS ();
+    InternalPrintMessage ("%7a = 0x%017lx%c", "mepc", Regs->sepc, (++Printed % 2) ? L'\t' : L'\n');
+    InternalPrintMessage ("%7a = 0x%017lx%c", "mstatus", Regs->sstatus, (++Printed % 2) ? L'\t' : L'\n');
+    InternalPrintMessage ("%7a = 0x%017lx%c", "mtval", Regs->stval, (++Printed % 2) ? L'\t' : L'\n');
+    #undef REG
+    #undef REGS
+  } else {
+    #define REGS()                                                          \
+    REG (t0); REG (t1); REG (t2); REG (t3); REG (t4); REG (t5); REG (t6); \
+    REG (s0); REG (s1); REG (s2); REG (s3); REG (s4); REG (s5); REG (s6); \
+    REG (s7); REG (s8); REG (s9); REG (s10); REG (s11);                   \
+    REG (a0); REG (a1); REG (a2); REG (a3); REG (a4); REG (a5); REG (a6); \
+    REG (a7);                                                             \
+    REG (zero); REG (ra); REG (sp); REG (gp); REG (tp);                   \
+    REG (sepc); REG (sstatus); REG (stval);
+
+    #define REG(x)  do {                                      \
+      InternalPrintMessage ("%7a = 0x%017lx%c", #x, Regs->x,  \
+                            (++Printed % 2) ? L'\t' : L'\n'); \
+    } while (0);
+
+    REGS ();
+    #undef REG
+    #undef REGS
+  }
+#else
   #define REGS()                                                          \
   REG (t0); REG (t1); REG (t2); REG (t3); REG (t4); REG (t5); REG (t6); \
   REG (s0); REG (s1); REG (s2); REG (s3); REG (s4); REG (s5); REG (s6); \
@@ -178,12 +235,12 @@ DumpCpuContext (
   } while (0);
 
   REGS ();
+  #undef REG
+  #undef REGS
+#endif
   if (Printed % 2 != 0) {
     InternalPrintMessage ("\n");
   }
-
-  #undef REG
-  #undef REGS
 
   DumpCpuBacktrace (SystemContext);
 
@@ -212,7 +269,15 @@ InitializeCpuExceptionHandlers (
   IN EFI_VECTOR_HANDOFF_INFO  *VectorInfo OPTIONAL
   )
 {
+  (VOID)VectorInfo;
+
+#ifdef RISCV_CPUCP_M_MODE
+  mCpuExceptionHandlerInMachineMode = TRUE;
+  __asm__ __volatile__ ("csrw %0, %1" :: "i" (CSR_MTVEC), "r" ((UINTN)MachineModeTrap) : "memory");
+#else
   RiscVSetSupervisorStvec ((UINT64)SupervisorModeTrap);
+#endif
+
   return EFI_SUCCESS;
 }
 
@@ -252,10 +317,17 @@ RegisterCpuInterruptHandler (
       return EFI_UNSUPPORTED;
     }
 
+    if (InterruptHandler == NULL) {
+      if (mIrqHandlers[EXCEPT_RISCV_IRQ_INDEX (ExceptionType)] == NULL) {
+        return EFI_INVALID_PARAMETER;
+      }
+
+      mIrqHandlers[EXCEPT_RISCV_IRQ_INDEX (ExceptionType)] = NULL;
+      return EFI_SUCCESS;
+    }
+
     if (mIrqHandlers[EXCEPT_RISCV_IRQ_INDEX (ExceptionType)] != NULL) {
       return EFI_ALREADY_STARTED;
-    } else if (InterruptHandler == NULL) {
-      return EFI_INVALID_PARAMETER;
     }
 
     mIrqHandlers[EXCEPT_RISCV_IRQ_INDEX (ExceptionType)] = InterruptHandler;
@@ -264,10 +336,17 @@ RegisterCpuInterruptHandler (
       return EFI_UNSUPPORTED;
     }
 
+    if (InterruptHandler == NULL) {
+      if (mExceptionHandlers[ExceptionType] == NULL) {
+        return EFI_INVALID_PARAMETER;
+      }
+
+      mExceptionHandlers[ExceptionType] = NULL;
+      return EFI_SUCCESS;
+    }
+
     if (mExceptionHandlers[ExceptionType] != NULL) {
       return EFI_ALREADY_STARTED;
-    } else if (InterruptHandler == NULL) {
-      return EFI_INVALID_PARAMETER;
     }
 
     mExceptionHandlers[ExceptionType] = InterruptHandler;
@@ -339,3 +418,45 @@ RiscVSupervisorModeTrapHandler (
   DumpCpuContext (ExceptionType, RiscVSystemContext);
   CpuDeadLoop ();
 }
+
+#ifdef RISCV_CPUCP_M_MODE
+/**
+  Machine mode trap handler.
+
+  @param[in]  MmodeTrapReg     Registers before trap occurred.
+
+**/
+VOID
+RiscVMachineModeTrapHandler (
+  SMODE_TRAP_REGISTERS  *MmodeTrapReg
+  )
+{
+  EFI_EXCEPTION_TYPE  ExceptionType;
+  EFI_SYSTEM_CONTEXT  RiscVSystemContext;
+  UINTN               IrqIndex;
+
+  RiscVSystemContext.SystemContextRiscV64 = (EFI_SYSTEM_CONTEXT_RISCV64 *)MmodeTrapReg;
+  __asm__ __volatile__ ("csrr %0, %1" : "=r" (ExceptionType) : "i" (CSR_MCAUSE) : "memory");
+
+  if (EXCEPT_RISCV_IS_IRQ (ExceptionType)) {
+    IrqIndex = EXCEPT_RISCV_IRQ_INDEX (ExceptionType);
+
+    if ((IrqIndex <= EXCEPT_RISCV_MAX_IRQS) &&
+        (mIrqHandlers[IrqIndex] != NULL))
+    {
+      mIrqHandlers[IrqIndex](ExceptionType, RiscVSystemContext);
+      return;
+    }
+  } else {
+    if ((ExceptionType <= EXCEPT_RISCV_MAX_EXCEPTIONS) &&
+        (mExceptionHandlers[ExceptionType] != 0))
+    {
+      mExceptionHandlers[ExceptionType](ExceptionType, RiscVSystemContext);
+      return;
+    }
+  }
+
+  DumpCpuContext (ExceptionType, RiscVSystemContext);
+  CpuDeadLoop ();
+}
+#endif

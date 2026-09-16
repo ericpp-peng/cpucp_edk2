@@ -21,6 +21,17 @@ SupervisorModeTrap (
   VOID
   );
 
+/**
+  Machine-mode trap entry point implemented in assembly
+**/
+#ifdef RISCV_CPUCP_M_MODE
+VOID
+EFIAPI
+MachineModeTrap (
+  VOID
+  );
+#endif
+
 //
 // Index of SMode trap register
 //
@@ -63,6 +74,53 @@ SupervisorModeTrap (
 
 #define SMODE_TRAP_REGS_OFFSET(x)  ((SMODE_TRAP_REGS_##x) * __SIZEOF_POINTER__)
 #define SMODE_TRAP_REGS_SIZE  SMODE_TRAP_REGS_OFFSET(last)
+
+#ifdef RISCV_CPUCP_M_MODE
+//
+// The Machine-mode frame has the same register layout as the Supervisor-mode
+// frame. Keep separate names so the assembly makes the CSR privilege level
+// explicit while sharing the existing EFI system-context layout.
+//
+#define MMODE_TRAP_REGS_zero     SMODE_TRAP_REGS_zero
+#define MMODE_TRAP_REGS_ra       SMODE_TRAP_REGS_ra
+#define MMODE_TRAP_REGS_sp       SMODE_TRAP_REGS_sp
+#define MMODE_TRAP_REGS_gp       SMODE_TRAP_REGS_gp
+#define MMODE_TRAP_REGS_tp       SMODE_TRAP_REGS_tp
+#define MMODE_TRAP_REGS_t0       SMODE_TRAP_REGS_t0
+#define MMODE_TRAP_REGS_t1       SMODE_TRAP_REGS_t1
+#define MMODE_TRAP_REGS_t2       SMODE_TRAP_REGS_t2
+#define MMODE_TRAP_REGS_s0       SMODE_TRAP_REGS_s0
+#define MMODE_TRAP_REGS_s1       SMODE_TRAP_REGS_s1
+#define MMODE_TRAP_REGS_a0       SMODE_TRAP_REGS_a0
+#define MMODE_TRAP_REGS_a1       SMODE_TRAP_REGS_a1
+#define MMODE_TRAP_REGS_a2       SMODE_TRAP_REGS_a2
+#define MMODE_TRAP_REGS_a3       SMODE_TRAP_REGS_a3
+#define MMODE_TRAP_REGS_a4       SMODE_TRAP_REGS_a4
+#define MMODE_TRAP_REGS_a5       SMODE_TRAP_REGS_a5
+#define MMODE_TRAP_REGS_a6       SMODE_TRAP_REGS_a6
+#define MMODE_TRAP_REGS_a7       SMODE_TRAP_REGS_a7
+#define MMODE_TRAP_REGS_s2       SMODE_TRAP_REGS_s2
+#define MMODE_TRAP_REGS_s3       SMODE_TRAP_REGS_s3
+#define MMODE_TRAP_REGS_s4       SMODE_TRAP_REGS_s4
+#define MMODE_TRAP_REGS_s5       SMODE_TRAP_REGS_s5
+#define MMODE_TRAP_REGS_s6       SMODE_TRAP_REGS_s6
+#define MMODE_TRAP_REGS_s7       SMODE_TRAP_REGS_s7
+#define MMODE_TRAP_REGS_s8       SMODE_TRAP_REGS_s8
+#define MMODE_TRAP_REGS_s9       SMODE_TRAP_REGS_s9
+#define MMODE_TRAP_REGS_s10      SMODE_TRAP_REGS_s10
+#define MMODE_TRAP_REGS_s11      SMODE_TRAP_REGS_s11
+#define MMODE_TRAP_REGS_t3       SMODE_TRAP_REGS_t3
+#define MMODE_TRAP_REGS_t4       SMODE_TRAP_REGS_t4
+#define MMODE_TRAP_REGS_t5       SMODE_TRAP_REGS_t5
+#define MMODE_TRAP_REGS_t6       SMODE_TRAP_REGS_t6
+#define MMODE_TRAP_REGS_mepc     SMODE_TRAP_REGS_sepc
+#define MMODE_TRAP_REGS_mstatus  SMODE_TRAP_REGS_sstatus
+#define MMODE_TRAP_REGS_mtval    SMODE_TRAP_REGS_stval
+#define MMODE_TRAP_REGS_last     SMODE_TRAP_REGS_last
+
+#define MMODE_TRAP_REGS_OFFSET(x)  ((MMODE_TRAP_REGS_##x) * __SIZEOF_POINTER__)
+#define MMODE_TRAP_REGS_SIZE  SMODE_TRAP_REGS_SIZE
+#endif
 
 #pragma pack(1)
 typedef struct {

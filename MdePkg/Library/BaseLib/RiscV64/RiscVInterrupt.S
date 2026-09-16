@@ -13,6 +13,13 @@
 ASM_GLOBAL ASM_PFX(RiscVDisableSupervisorModeInterrupts)
 ASM_GLOBAL ASM_PFX(RiscVEnableSupervisorModeInterrupt)
 ASM_GLOBAL ASM_PFX(RiscVGetSupervisorModeInterrupts)
+#ifdef RISCV_CPUCP_M_MODE
+ASM_GLOBAL ASM_PFX(RiscVDisableMachineModeInterrupts)
+ASM_GLOBAL ASM_PFX(RiscVEnableMachineModeInterrupts)
+ASM_GLOBAL ASM_PFX(RiscVGetMachineModeInterrupts)
+ASM_GLOBAL ASM_PFX(RiscVDisableMachineSoftwareInterrupt)
+ASM_GLOBAL ASM_PFX(RiscVDisableMachineLocalInterrupt0)
+#endif
 
 #define  SSTATUS_SPP_BIT_POSITION  8
 
@@ -27,6 +34,36 @@ ASM_PFX(RiscVDisableSupervisorModeInterrupts):
   ld    a1, (sp)
   add   sp, sp, (__SIZEOF_POINTER__)
   ret
+
+#ifdef RISCV_CPUCP_M_MODE
+//
+// CPUCP executes UEFI in Machine mode. The Machine-mode helpers below are
+// selected only for CPUCP; generic RISC-V platforms continue to use the
+// Supervisor-mode helpers below.
+//
+// This routine disables machine mode interrupt
+//
+ASM_PFX(RiscVDisableMachineModeInterrupts):
+  add   sp, sp, -(__SIZEOF_POINTER__)
+  sd    a1, (sp)
+  li    a1, MSTATUS_MIE
+  csrc  CSR_MSTATUS, a1
+  ld    a1, (sp)
+  add   sp, sp, (__SIZEOF_POINTER__)
+  ret
+
+//
+// This routine enables machine mode interrupt
+//
+ASM_PFX(RiscVEnableMachineModeInterrupts):
+  add   sp, sp, -(__SIZEOF_POINTER__)
+  sd    a1, (sp)
+  li    a1, MSTATUS_MIE
+  csrs  CSR_MSTATUS, a1
+  ld    a1, (sp)
+  add   sp, sp, (__SIZEOF_POINTER__)
+  ret
+#endif
 
 //
 // This routine enables supervisor mode interrupt
@@ -83,6 +120,50 @@ ASM_FUNC (RiscVGetSupervisorModeInterrupts)
   andi a0, a0, SSTATUS_SIE
   ret
 
+#ifdef RISCV_CPUCP_M_MODE
+//
+// This routine returns machine mode interrupt
+// status.
+//
+ASM_FUNC (RiscVGetMachineModeInterrupts)
+  csrr a0, CSR_MSTATUS
+  andi a0, a0, MSTATUS_MIE
+  ret
+
+//
+// This routine disables machine timer interrupt.
+//
+ASM_FUNC (RiscVDisableTimerInterrupt)
+    li   a0, MIP_MTIP
+    csrc CSR_MIE, a0
+    ret
+
+//
+// This routine enables machine timer interrupt.
+//
+ASM_FUNC (RiscVEnableTimerInterrupt)
+    li   a0, MIP_MTIP
+    csrs CSR_MIE, a0
+    ret
+
+ASM_FUNC (RiscVDisableMachineSoftwareInterrupt)
+    li    a0, MIP_MSIP
+    csrc  CSR_MIE, a0
+    ret
+
+//
+// CPUCP Local Interrupt 0 (LIE0) is enabled before control reaches the
+// UEFI entry point. CPUCP UEFI currently has no handler or documented
+// acknowledge/clear sequence for the underlying interrupt source.
+//
+// Keep mie.LIE0 masked to prevent an unhandled Machine-mode interrupt
+// after global interrupts are enabled.
+//
+ASM_FUNC (RiscVDisableMachineLocalInterrupt0)
+    li    a0, 0x10000
+    csrc  CSR_MIE, a0
+    ret
+#else
 //
 // This routine disables supervisor mode timer interrupt
 //
@@ -106,3 +187,4 @@ ASM_FUNC (RiscVClearPendingTimerInterrupt)
     li   a0, SIP_STIP
     csrc CSR_SIP, a0
     ret
+#endif

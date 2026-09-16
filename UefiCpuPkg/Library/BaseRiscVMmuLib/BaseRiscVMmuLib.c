@@ -59,8 +59,12 @@ RiscVMmuEnabled (
   VOID
   )
 {
+#ifdef RISCV_CPUCP_M_MODE
+  return FALSE;
+#else
   return ((RiscVGetSupervisorAddressTranslationRegister () &
            SATP64_MODE) != (SATP_MODE_OFF << SATP64_MODE_SHIFT));
+#endif
 }
 
 /**
@@ -75,8 +79,12 @@ RiscVGetRootTranslateTable (
   VOID
   )
 {
+#ifdef RISCV_CPUCP_M_MODE
+  return 0;
+#else
   return (RiscVGetSupervisorAddressTranslationRegister () & SATP64_PPN) <<
          RISCV_MMU_PAGE_SHIFT;
+#endif
 }
 
 /**
@@ -764,6 +772,15 @@ RiscVConfigureMmu (
 {
   EFI_STATUS  Status;
   UINTN       Idx;
+
+#ifdef RISCV_CPUCP_M_MODE
+  //
+  // CPUCP executes UEFI in M-mode and does not use the SATP-based
+  // supervisor address-translation mechanism. MMU configuration is
+  // intentionally a no-op.
+  //
+  return EFI_SUCCESS;
+#endif
 
   Status = EFI_SUCCESS;
 

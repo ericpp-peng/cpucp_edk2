@@ -277,6 +277,18 @@ RiscVClearPendingTimerInterrupt (
   VOID
   );
 
+#ifdef RISCV_CPUCP_M_MODE
+VOID
+RiscVDisableMachineSoftwareInterrupt (
+  VOID
+  );
+
+VOID
+RiscVDisableMachineLocalInterrupt0 (
+  VOID
+  );
+#endif
+
 /**
   RISC-V invalidate instruction cache.
 

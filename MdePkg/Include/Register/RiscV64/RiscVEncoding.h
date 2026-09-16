@@ -76,6 +76,12 @@
 #define CSR_CYCLE  0xc00
 #define CSR_TIME   0xc01
 
+/* Machine Trap Setup */
+#define CSR_MSTATUS  0x300
+#define CSR_MISA     0x301
+#define CSR_MIE      0x304
+#define CSR_MTVEC    0x305
+
 /* Floating-Point */
 #define CSR_FCSR  0x003
 
@@ -95,6 +101,13 @@
 #define CSR_SCAUSE    0x142
 #define CSR_STVAL     0x143
 #define CSR_SIP       0x144
+
+/* Machine Trap Handling */
+#define CSR_MSCRATCH  0x340
+#define CSR_MEPC      0x341
+#define CSR_MCAUSE    0x342
+#define CSR_MTVAL     0x343
+#define CSR_MIP       0x344
 
 /* Supervisor Protection and Translation */
 #define CSR_SATP  0x180
